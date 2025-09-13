@@ -25,7 +25,12 @@ from homeassistant.util import dt
 from homeassistant.util.json import JsonArrayType, load_json_array
 from datetime import datetime, timedelta
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    DEFAULT_STATE_SCHEDULED,
+    DEFAULT_STATE_DUE,
+    DEFAULT_STATE_OVERDUE
+)
 
 _LOGGER = logging.getLogger(__name__)
 PERSISTENCE = ".activities_list.json"
@@ -222,6 +227,14 @@ class ActivityEntity(SensorEntity):
         self.entity_id = "sensor." + slugify(
             self._activity["category"] + "_" + self._activity["name"]
         )
+        self._update_attributes()
+
+    def _update_attributes(self):
+        """Update the attributes including due_date."""
+        due_date = dt.as_local(
+            dt.parse_datetime(self._activity["last_completed"])
+        ) + timedelta(milliseconds=self._activity["frequency_ms"])
+        
         self._attributes = {
             "category": self._activity["category"],
             "last_completed": self._activity["last_completed"],
@@ -229,6 +242,7 @@ class ActivityEntity(SensorEntity):
             "friendly_name": self._activity["name"],
             "id": self._activity["id"],
             "integration": DOMAIN,
+            "due_date": due_date.isoformat(),
         }
 
     @property
@@ -252,9 +266,26 @@ class ActivityEntity(SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return dt.as_local(
+        # Get custom state terms from config options
+        options = self._config.options
+        state_scheduled = options.get("state_scheduled", DEFAULT_STATE_SCHEDULED)
+        state_due = options.get("state_due", DEFAULT_STATE_DUE)
+        state_overdue = options.get("state_overdue", DEFAULT_STATE_OVERDUE)
+        
+        # Calculate due date
+        due_date = dt.as_local(
             dt.parse_datetime(self._activity["last_completed"])
         ) + timedelta(milliseconds=self._activity["frequency_ms"])
+        
+        now = dt.now()
+        
+        # Determine state based on due date
+        if due_date.date() > now.date():
+            return state_scheduled
+        elif due_date.date() == now.date():
+            return state_due
+        else:
+            return state_overdue
 
     @property
     def extra_state_attributes(self):
@@ -273,7 +304,6 @@ class ActivityEntity(SensorEntity):
         """
         for item in self._hass.data[DOMAIN].items:
             if self._id == item["id"]:
-                self._attributes["last_completed"] = item["last_completed"]
-                self._attributes["category"] = item["category"]
-                self._attributes["frequency_ms"] = item["frequency_ms"]
-                self._attributes["icon"] = item["icon"]
+                self._activity = item
+                self._update_attributes()
+                break

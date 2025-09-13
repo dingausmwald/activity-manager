@@ -4,7 +4,14 @@ from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.core import callback
 
-from .const import DOMAIN  # import the domain from const.py
+from .const import (
+    DOMAIN,
+    DEFAULT_STATE_SCHEDULED,
+    DEFAULT_STATE_DUE, 
+    DEFAULT_STATE_OVERDUE,
+    DEFAULT_UPDATE_INTERVAL,
+    UPDATE_INTERVALS
+)
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,4 +52,29 @@ class ActivityManagerOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        return self.async_abort(reason="single_instance_allowed")
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current_options = self.config_entry.options
+        
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    "state_scheduled", 
+                    default=current_options.get("state_scheduled", DEFAULT_STATE_SCHEDULED)
+                ): str,
+                vol.Optional(
+                    "state_due", 
+                    default=current_options.get("state_due", DEFAULT_STATE_DUE)
+                ): str,
+                vol.Optional(
+                    "state_overdue", 
+                    default=current_options.get("state_overdue", DEFAULT_STATE_OVERDUE)
+                ): str,
+                vol.Optional(
+                    "update_interval",
+                    default=current_options.get("update_interval", DEFAULT_UPDATE_INTERVAL)
+                ): vol.In(list(UPDATE_INTERVALS.keys())),
+            })
+        )

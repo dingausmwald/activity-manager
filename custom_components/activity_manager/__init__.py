@@ -17,7 +17,7 @@ from homeassistant import config_entries
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 from homeassistant.util import dt
-from .const import DOMAIN
+from .const import DOMAIN, UPDATE_INTERVALS
 from .utils import dt_as_local
 
 _LOGGER = logging.getLogger(__name__)
@@ -225,6 +225,26 @@ async def async_setup_entry(
     websocket_api.async_register_command(hass, websocket_handle_add)
     websocket_api.async_register_command(hass, websocket_handle_update)
     websocket_api.async_register_command(hass, websocket_handle_remove)
+
+    # Setup timer for regular state updates
+    async def update_activity_states(now):
+        """Update all activity entity states."""
+        data = hass.data[DOMAIN]
+        for entity_id in hass.states.async_entity_ids("sensor"):
+            entity_state = hass.states.get(entity_id)
+            if entity_state and entity_state.attributes.get("integration") == DOMAIN:
+                await hass.services.async_call(
+                    "homeassistant",
+                    "update_entity", 
+                    {"entity_id": entity_id}
+                )
+
+    # Get update interval from config options
+    update_interval_key = config_entry.options.get("update_interval", "daily")
+    update_interval_seconds = UPDATE_INTERVALS.get(update_interval_key, UPDATE_INTERVALS["daily"])
+    
+    # Start the timer
+    async_track_time_interval(hass, update_activity_states, timedelta(seconds=update_interval_seconds))
 
     return True
 

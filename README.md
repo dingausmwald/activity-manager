@@ -2,7 +2,7 @@
 
 Manager recurring tasks from within Home Assistant
 
-Use the companion [Activity Manager Card](https://github.com/pathofleastresistor/activity-manager-card) for the best experience.
+Use the companion [Activity Manager Card](https://github.com/dingausmwald/activity-manager-card) for the best experience.
 
 The core idea is that an activity happens on a recurring basis, which is stored in the `frequency` field when adding an activity. By default, the activity is last completed when you first add the activity and then the timer can be reset.
 
@@ -32,7 +32,7 @@ Once installed, you can use the link below to add the integration from the UI.
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=activity_manager)
 
-If you're using the [Activity Manager Card](https://github.com/pathofleastresistor/activity-manager-card), then you all you need to do is add the Activity Manager Card to your dashboard. When you're creating the card, you'll have to supply a `category` attribute to the card.
+If you're using the [Activity Manager Card](https://github.com/dingausmwald/activity-manager-card), then you all you need to do is add the Activity Manager Card to your dashboard. When you're creating the card, you'll have to supply a `category` attribute to the card.
 
 ### Notifications
 
@@ -65,5 +65,30 @@ data:
 ### More information
 
 -   Activities are stored in .activities_list.json in your `<config>` folder
--   An entity is created for each activity (e.g. `sensor.<category>_<activity>`). The state of the activity is the datetime of when the activity is due. You can use this entity to build notifications or your own custom cards.
+-   An entity is created for each activity (e.g. `sensor.<category>_<activity>`). The state of the activity shows the current status (scheduled/due/overdue), with the due date available as an attribute.
 -   Three services are exposed: `activity_manager.add_activity`, `activity_manager.update_activity`, `activity_manager.remove_activity`. The update activity can be used to reset the timer.
+
+## Configuration Options
+
+After installing the integration, you can configure:
+
+- **Custom State Terms**: Define your own terms for "scheduled", "due", and "overdue" states
+- **Update Interval**: Choose how often the states are updated (daily, hourly, 15min, 5min)
+
+Access these options via: Configuration → Integrations → Activity Manager → Configure
+
+## Changelog
+
+### Version 0.1.0 (Fork by dingausmwald)
+
+**New Features:**
+- 🎯 **Smart State System**: Sensors now show status ("scheduled", "due", "overdue") instead of dates
+- ⚙️ **Custom State Terms**: Configure your own terms via integration options
+- ⏰ **Configurable Update Intervals**: Choose from daily to 5-minute updates
+- 📅 **Due Date Attribute**: Original due date preserved as sensor attribute
+- 📊 **Logbook Integration**: State changes now appear in Home Assistant logbook
+
+**Technical:**
+- Added options flow for customization
+- Implemented `async_track_time_interval` for regular updates
+- Maintained WebSocket API compatibility for existing cards

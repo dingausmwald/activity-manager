@@ -63,6 +63,13 @@ update_activity:
         entity:
           filter:
             - integration: "activity_manager"
+    name:
+      name: Name
+      description: The name of the activity
+      required: false
+      example: Running
+      selector:
+        text:
     now:
       name: Now
       description: Preferred over last completed

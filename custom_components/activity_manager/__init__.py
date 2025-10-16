@@ -85,6 +85,7 @@ async def async_setup_entry(
     async def update_item_service(call: ServiceCall) -> None:
         data = hass.data[DOMAIN]
         entity_id = call.data.get("entity_id")
+        name = call.data.get("name")
         last_completed = call.data.get("last_completed")
         category = call.data.get("category")
         now = call.data.get("now")
@@ -103,6 +104,7 @@ async def async_setup_entry(
             if entity:
                 await data.async_update_activity(
                     entity.unique_id,
+                    name=name,
                     last_completed=last_completed,
                     category=category,
                     frequency=frequency,
@@ -186,6 +188,8 @@ async def async_setup_entry(
         item_id = msg.pop("item_id")
         msg.pop("type")
         last_completed = msg.get("last_completed")
+        name = msg.get("name")
+        category = msg.get("category")
         data = msg
 
         if last_completed:
@@ -194,7 +198,7 @@ async def async_setup_entry(
             last_completed = dt.now().isoformat()
 
         item = await hass.data[DOMAIN].async_update_activity(
-            item_id, last_completed=last_completed, context=connection.context(msg)
+            item_id, name=name, category=category, last_completed=last_completed, context=connection.context(msg)
         )
         connection.send_message(websocket_api.result_message(msg_id, item))
 

@@ -120,6 +120,7 @@ class ActivityManager:
     async def async_update_activity(
         self,
         item_id,
+        name=None,
         last_completed=None,
         category=None,
         frequency=None,
@@ -127,6 +128,9 @@ class ActivityManager:
         icon=None,
     ):
         item = next((itm for itm in self.items if itm["id"] == item_id), None)
+
+        if name:
+            item["name"] = name
 
         if last_completed:
             item["last_completed"] = last_completed
@@ -141,14 +145,34 @@ class ActivityManager:
         if icon:
             item["icon"] = icon
 
+        if name or category:
+            entity_registry = async_get(self.hass)
+            entity_entry = None
+            for eid, entry in list(entity_registry.entities.items()):
+                if entry.unique_id == item["id"]:
+                    entity_entry = entry
+                    break
+            
+            if entity_entry:
+                new_entity_id = "sensor." + slugify(item["category"] + "_" + item["name"])
+                update_params = {}
+                if name:
+                    update_params["name"] = item["name"]
+                if new_entity_id != entity_entry.entity_id:
+                    update_params["new_entity_id"] = new_entity_id
+                
+                if update_params:
+                    entity_registry.async_update_entity(entity_entry.entity_id, **update_params)
+        
         entity_registry = async_get(self.hass)
-        for entity_id, entity_entry in entity_registry.entities.items():
-            if entity_entry.unique_id == item["id"]:  # entity_entry.update()
+        for eid, entry in list(entity_registry.entities.items()):
+            if entry.unique_id == item["id"]:
                 await self.hass.services.async_call(
                     "homeassistant",
                     "update_entity",
-                    {"entity_id": entity_entry.entity_id},
+                    {"entity_id": entry.entity_id},
                 )
+                break
         await self.update_entities()
         _LOGGER.debug("Updated activity: %s", item)
 
@@ -219,14 +243,10 @@ class ActivityEntity(SensorEntity):
 
     def __init__(self, hass, config, activity) -> None:
         """Initialize the sensor."""
-        _attr_has_entity_name = True
         self._hass = hass
         self._config = config
         self._activity = activity
         self._id = self._activity["id"]
-        self.entity_id = "sensor." + slugify(
-            self._activity["category"] + "_" + self._activity["name"]
-        )
         self._update_attributes()
 
     def _update_attributes(self):
@@ -248,20 +268,17 @@ class ActivityEntity(SensorEntity):
     @property
     def unique_id(self):
         """Return a unique ID to use for this sensor."""
-        # return slugify(self._activity["category"] + "_" + self._activity["name"])
         return self._id
-
-    @property
-    def entity_id(self):
-        return self.entity_id
-
-    def entity_id(self, value):
-        self.entity_id = value
 
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
         return self._activity["name"]
+    
+    @property
+    def suggested_object_id(self):
+        """Return a suggested object_id for this entity."""
+        return slugify(self._activity["category"] + "_" + self._activity["name"])
 
     @property
     def state(self):
